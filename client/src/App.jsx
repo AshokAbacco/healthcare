@@ -64,9 +64,10 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route path="/opd-dashboard" element={<OPDDashboard />} />
-        <Route path="/opd/register"  element={<OPDPatientForm patients={opdPatients} setPatients={setOpdPatients} />} />
-        <Route path="/opd/patients"  element={<OPDPatientList patients={opdPatients} setPatients={setOpdPatients} />} />
-        <Route path="/opd/followups" element={<OPDFollowUps patients={opdPatients} />} />
+        <Route path="/opd/register"  element={<OPDPatientForm />} />
+        <Route path="/opd/patients/:id/edit" element={<OPDPatientForm />} />
+        <Route path="/opd/patients"  element={<OPDPatientList />} />
+        <Route path="/opd/followups" element={<OPDFollowUps />} />
       </Route>
 
       {/* Receptionist IPD */}

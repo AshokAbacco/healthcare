@@ -32,3 +32,69 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum PatientCondition {
+  STABLE
+  IMPROVING
+  CHRONIC
+  MILD
+  GOOD
+  CRITICAL
+}
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  MISSED
+}
+
+enum ReminderStatus {
+  NOT_SET
+  PENDING
+  SENT
+  FAILED
+}
+
+model OPDPatient {
+  id          String @id @default(cuid())
+  tokenNumber Int    @unique @default(autoincrement())
+  // Display serial like "OPD-001" is built from tokenNumber in the API layer —
+  // not stored, so there's nothing to keep in sync.
+
+  name   String
+  age    Int
+  gender Gender
+  place  String?
+  phone  String?
+
+  fee   Float
+  cash  Float @default(0)
+  upi   Float @default(0)
+  total Float @default(0) // = cash + upi, computed and stored at write time
+
+  visitDate DateTime @db.Date
+  notes     String?  @db.Text
+
+  followUpDate   DateTime?         @db.Date
+  condition      PatientCondition?
+  followUpDesc   String?           @db.Text
+  followUpStatus FollowUpStatus    @default(PENDING)
+
+  reminderEnabled  Boolean        @default(false)
+  reminderStatus   ReminderStatus @default(NOT_SET)
+  reminderSentDate DateTime?      @db.Date
+
+  // Filled in later by the doctor dashboard, not the registration form
+  diagnosis    String? @db.Text
+  prescription String? @db.Text
+  doctorNotes  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

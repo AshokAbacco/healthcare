@@ -1,7 +1,7 @@
-// /server\src\index.js
 import express from "express";
 import cors from "cors";
 import authRoutes from "./auth/auth.routes.js";
+import opdRoutes from "./opd/opd.routes.js";
 
 const app = express();
 
@@ -19,5 +19,8 @@ app.get("/", (req, res) => {
 
 // Auth routes
 app.use("/api/auth", authRoutes);
+
+// OPD routes
+app.use("/api/opd/patients", opdRoutes);
 
 export default app;
