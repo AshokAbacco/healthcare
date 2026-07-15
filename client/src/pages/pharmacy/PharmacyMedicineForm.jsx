@@ -1,6 +1,6 @@
 // client/src/pages/pharmacy/PharmacyMedicineForm.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader, FormInput, FormSelect, FormTextarea, SectionCard } from "../../components/UI";
 import { ArrowLeft, Pill, Package, DollarSign, Truck, FileText, Save, X, Plus, Loader2, Layers, Copy } from "lucide-react";
 import { api } from "../../lib/api";
@@ -85,6 +85,20 @@ function AddCategoryModal({ onCancel, onCreated }) {
 }
 
 export default function PharmacyMedicineForm({ medicines, setMedicines, editMedicine, onDone }) {
+  const { id: routeId } = useParams();
+  // editMedicine only arrives as a prop when we got here via in-app
+  // navigation (e.g. clicking Edit from a list that already has the data
+  // in memory). If this component was mounted straight from the URL —
+  // a new tab, a refresh, a shared link — there's no in-memory medicine to
+  // receive, even though the URL clearly has the id. In that case we fetch
+  // it ourselves using the :id route param.
+  const needsFetch = !editMedicine && !!routeId;
+  const [fetchedMedicine, setFetchedMedicine] = useState(null);
+  const [fetchingMedicine, setFetchingMedicine] = useState(needsFetch);
+  const [fetchError, setFetchError] = useState("");
+
+  const activeEditMedicine = editMedicine || fetchedMedicine;
+
   const [form, setForm] = useState(editMedicine || defaultForm);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -94,12 +108,30 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
   const [existingMedicines, setExistingMedicines] = useState([]);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!needsFetch) return;
+    (async () => {
+      setFetchingMedicine(true);
+      setFetchError("");
+      try {
+        const { medicine } = await api.get(`/pharmacy/medicines/${routeId}`);
+        setFetchedMedicine(medicine);
+        setForm(medicine);
+      } catch (err) {
+        setFetchError(err.message || "Could not load this medicine.");
+      } finally {
+        setFetchingMedicine(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId]);
+
   // Load the full medicine list once so we can spot "this drug already has
   // other batches" while the pharmacist is typing the drug name below. Only
   // relevant when adding a NEW medicine — editing an existing row doesn't
   // need this lookup.
   useEffect(() => {
-    if (editMedicine) return;
+    if (editMedicine || needsFetch) return;
     (async () => {
       try {
         const { medicines: data } = await api.get("/pharmacy/medicines");
@@ -109,7 +141,7 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
         // form still works fine without it if this fetch fails
       }
     })();
-  }, [editMedicine]);
+  }, [editMedicine, needsFetch]);
 
   // Substring match (not exact) so partial typing like "para" surfaces
   // "Paracetamol 500mg" as the pharmacist types — this is meant to work like
@@ -175,22 +207,29 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
     setSaving(true);
     setError("");
 
-    if (editMedicine) {
-      // Editing still uses the old local-state approach for now — the
-      // Medicine list/update/delete backend endpoints come with the next
-      // round of work on PharmacyMedicineList.jsx.
-      const entry = {
+    if (activeEditMedicine) {
+      const payload = {
         ...form,
-        id: editMedicine.id,
         purchasePrice: parseFloat(form.purchasePrice) || 0,
         sellingPrice: parseFloat(form.sellingPrice) || 0,
         quantity: parseInt(form.quantity) || 0,
         reorderLevel: parseInt(form.reorderLevel) || 0,
-        stockHistory: editMedicine.stockHistory || [],
       };
-      setMedicines(ms => ms.map(m => m.id === editMedicine.id ? entry : m));
-      setSaving(false);
-      if (onDone) onDone(); else navigate("/pharmacy/medicines");
+      try {
+        const { medicine: updated } = await api.put(`/pharmacy/medicines/${activeEditMedicine.id}`, payload);
+        // setMedicines is only available when this form was rendered from
+        // a parent that already has the list in memory (e.g. navigated to
+        // in-app). When opened fresh via URL, there's nothing to sync
+        // locally — the API call above is the source of truth either way.
+        if (setMedicines) {
+          setMedicines(ms => ms.map(m => m.id === updated.id ? updated : m));
+        }
+        if (onDone) onDone(updated); else navigate("/pharmacy/medicines");
+      } catch (err) {
+        setError(err.message || "Could not update this medicine. Please try again.");
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 
@@ -210,10 +249,42 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
     ? (((parseFloat(form.sellingPrice) - parseFloat(form.purchasePrice)) / parseFloat(form.purchasePrice)) * 100).toFixed(1)
     : null;
 
+  if (fetchingMedicine) {
+    return (
+      <div className="w-full px-2 sm:px-4 max-w-6xl mx-auto">
+        <PageHeader title="Edit Medicine" subtitle="Pharmacy inventory management" />
+        <div className="flex items-center justify-center py-16">
+          <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 text-sm font-medium">
+            <Loader2 className="w-5 h-5 animate-spin" /> Loading medicine...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="w-full px-2 sm:px-4 max-w-6xl mx-auto">
+        <PageHeader
+          title="Edit Medicine"
+          subtitle="Pharmacy inventory management"
+          action={
+            <button onClick={back} className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+          }
+        />
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl px-4 py-3 text-rose-600 dark:text-rose-400 text-sm font-medium mb-4">
+          {fetchError}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-2 sm:px-4 max-w-6xl mx-auto">
       <PageHeader
-        title={editMedicine ? "Edit Medicine" : "Add Medicine"}
+        title={activeEditMedicine ? "Edit Medicine" : "Add Medicine"}
         subtitle="Pharmacy inventory management"
         action={
           <button onClick={back} className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors">
@@ -271,7 +342,7 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
               a short search term could match more than one drug. Purely
               informational + a prefill shortcut; submitting always creates a
               brand-new row, never merges into these. */}
-          {!editMedicine && matchedGroups.length > 0 && (
+          {!activeEditMedicine && matchedGroups.length > 0 && (
             <div className="mt-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -363,7 +434,7 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-semibold px-6 py-2.5 rounded-xl hover:scale-[1.02] transition-transform shadow-lg shadow-emerald-500/20 text-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Saving..." : editMedicine ? "Update Medicine" : "Add Medicine"}
+            {saving ? "Saving..." : activeEditMedicine ? "Update Medicine" : "Add Medicine"}
           </button>
           <button
             type="button"
