@@ -38,8 +38,9 @@ const menuConfig = {
     { label: "Payments",      icon: Wallet,          to: "/ipd/payments"  },
   ],
   "doctor-OPD": [
-    { label: "OPD Patients", icon: Stethoscope,   to: "/doctor/opd"           },
-    { label: "Follow-Ups",   icon: CalendarClock, to: "/doctor/opd/followups" },
+    { label: "Dashboard",    icon: LayoutDashboard, to: "/doctor/opd/dashboard" },
+    { label: "OPD Patients", icon: Stethoscope,     to: "/doctor/opd/patients"  },
+    { label: "Follow-Ups",   icon: CalendarClock,   to: "/doctor/opd/followups" },
   ],
   "doctor-IPD": [
     { label: "IPD Patients", icon: BedDouble, to: "/doctor/ipd" },
@@ -142,6 +143,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <li key={link.to}>
                 <NavLink
                   to={link.to}
+                  end
                   onClick={() => setMobileOpen(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-sm font-medium group relative ${

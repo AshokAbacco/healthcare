@@ -20,6 +20,7 @@ import IPDPatientList from "./pages/ipd/IPDPatientList";
 import IPDPatientForm from "./pages/ipd/IPDPatientForm";
 import IPDPaymentList from "./pages/ipd/payments/IPDPaymentList";
 
+import DoctorOPDLayout from "./pages/doctor/DoctorOPDLayout";
 import { DoctorOPDDashboard } from "./pages/doctor/DoctorOPDDashboard";
 import { DoctorIPDDashboard } from "./pages/doctor/DoctorIPDDashboard";
 
@@ -81,14 +82,21 @@ function AppRoutes() {
         <Route path="/ipd/payments"  element={<IPDPaymentList />} />
       </Route>
 
-      {/* Doctor OPD */}
+      {/* Doctor OPD — /doctor/opd itself just redirects to the dashboard;
+          dashboard/patients/followups are real sibling routes sharing
+          DoctorOPDLayout (banner + tab nav), so the URL always matches
+          what's on screen and the sidebar highlights the right tab. */}
       <Route element={
         <ProtectedRoute role="doctor" module="OPD">
           <Layout />
         </ProtectedRoute>
       }>
-        <Route path="/doctor/opd"          element={<DoctorOPDDashboard patients={opdPatients} />} />
-        <Route path="/doctor/opd/followups" element={<OPDFollowUps patients={opdPatients} />} />
+        <Route element={<DoctorOPDLayout />}>
+          <Route path="/doctor/opd" element={<Navigate to="/doctor/opd/dashboard" replace />} />
+          <Route path="/doctor/opd/dashboard" element={<DoctorOPDDashboard />} />
+          <Route path="/doctor/opd/patients"  element={<OPDPatientList readOnly />} />
+          <Route path="/doctor/opd/followups" element={<OPDFollowUps patients={opdPatients} />} />
+        </Route>
       </Route>
 
       {/* Doctor IPD */}

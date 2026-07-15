@@ -164,6 +164,7 @@ model Medicine {
   purchasePrice       Float
   sellingPrice        Float
   quantity            Int                  @default(0)
+  initialQuantity     Int                  @default(0)
   reorderLevel        Int                  @default(0)
   expiryDate          DateTime             @db.Date
   supplierName        String?

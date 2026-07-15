@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, FormInput, FormSelect, FormTextarea, SectionCard } from "../../components/UI";
-import { ArrowLeft, Pill, Package, DollarSign, Truck, FileText, Save, X, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Pill, Package, DollarSign, Truck, FileText, Save, X, Plus, Loader2, Layers, Copy } from "lucide-react";
 import { api } from "../../lib/api";
 
 const defaultForm = {
@@ -91,7 +91,62 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [existingMedicines, setExistingMedicines] = useState([]);
   const navigate = useNavigate();
+
+  // Load the full medicine list once so we can spot "this drug already has
+  // other batches" while the pharmacist is typing the drug name below. Only
+  // relevant when adding a NEW medicine — editing an existing row doesn't
+  // need this lookup.
+  useEffect(() => {
+    if (editMedicine) return;
+    (async () => {
+      try {
+        const { medicines: data } = await api.get("/pharmacy/medicines");
+        setExistingMedicines(data);
+      } catch {
+        // silent — this is a helpful-hint feature, not a blocking one; the
+        // form still works fine without it if this fetch fails
+      }
+    })();
+  }, [editMedicine]);
+
+  // Substring match (not exact) so partial typing like "para" surfaces
+  // "Paracetamol 500mg" as the pharmacist types — this is meant to work like
+  // live autocomplete, not just catch an already-complete name. Requires at
+  // least 3 characters so it doesn't fire on every single keystroke.
+  // Results are grouped by exact drug name, since a short substring (e.g.
+  // "cet") could otherwise match several unrelated drugs at once.
+  const typed = form.drugName.trim().toLowerCase();
+  const matchedGroups = typed.length >= 3
+    ? Object.values(
+        existingMedicines
+          .filter((m) => m.drugName.toLowerCase().includes(typed))
+          .reduce((groups, m) => {
+            const key = m.drugName.trim().toLowerCase();
+            (groups[key] ||= { drugName: m.drugName, batches: [] }).batches.push(m);
+            return groups;
+          }, {})
+      )
+    : [];
+
+  // Copies the non-batch-specific fields from an existing entry as a starting
+  // point — Medicine ID, Batch Number, Quantity, and Expiry Date are left for
+  // the pharmacist to fill in fresh, since those must differ per batch.
+  const useAsTemplate = (m) => {
+    setForm((f) => ({
+      ...f,
+      drugName: m.drugName,
+      genericName: m.genericName || "",
+      category: m.category || "",
+      manufacturer: m.manufacturer || "",
+      purchasePrice: m.purchasePrice ?? "",
+      sellingPrice: m.sellingPrice ?? "",
+      reorderLevel: m.reorderLevel ?? "",
+      supplierName: m.supplierName || "",
+      notes: m.notes || "",
+    }));
+  };
 
   const fetchCategories = async () => {
     setCategoriesLoading(true);
@@ -210,6 +265,58 @@ export default function PharmacyMedicineForm({ medicines, setMedicines, editMedi
             <FormInput label="Manufacturer"          value={form.manufacturer} onChange={set("manufacturer")} placeholder="e.g. Sun Pharma" />
             <FormInput label="Batch Number"          value={form.batchNumber}  onChange={set("batchNumber")}  placeholder="e.g. BTH-2024-001" required />
           </div>
+
+          {/* Existing-drug reference panel — only while adding (not editing).
+              Substring-matches as you type, grouped by exact drug name since
+              a short search term could match more than one drug. Purely
+              informational + a prefill shortcut; submitting always creates a
+              brand-new row, never merges into these. */}
+          {!editMedicine && matchedGroups.length > 0 && (
+            <div className="mt-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                  {matchedGroups.length === 1
+                    ? `${matchedGroups[0].drugName} already in inventory`
+                    : `${matchedGroups.length} matching drugs already in inventory`}
+                </p>
+              </div>
+
+              {matchedGroups.map((group) => (
+                <div key={group.drugName}>
+                  {matchedGroups.length > 1 && (
+                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1.5">{group.drugName}</p>
+                  )}
+                  <div className="space-y-2">
+                    {group.batches.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-3.5 py-2.5"
+                      >
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                          <span>Batch: <span className="font-mono text-slate-700 dark:text-slate-300">{m.batchNumber}</span></span>
+                          <span>Category: <span className="text-slate-700 dark:text-slate-300">{m.category}</span></span>
+                          <span>In Stock: <span className={`font-semibold ${m.quantity === 0 ? "text-red-500 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>{m.quantity}</span></span>
+                          <span>Expiry: <span className="text-slate-700 dark:text-slate-300">{m.expiryDate}</span></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => useAsTemplate(m)}
+                          className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400 hover:underline"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Use as template
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <p className="text-[11px] text-blue-700/70 dark:text-blue-400/70">
+                This will start a new, separate batch — Medicine ID, Batch Number, Quantity, and Expiry Date still need to be entered fresh below.
+              </p>
+            </div>
+          )}
         </SectionCard>
 
         <SectionCard title="Pricing" icon={DollarSign}>
