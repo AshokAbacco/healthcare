@@ -116,7 +116,7 @@ function AppRoutes() {
         <Route path="/doctor/ipd/followups" element={< IPDFollowUps patients={ipdPatients} />} />
       </Route>
 
-         
+         {/* profile */}
       <Route element={
         <ProtectedRoute role="doctor">
           <Layout />
