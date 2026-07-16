@@ -1,11 +1,22 @@
 // client/src/pages/login/Login.jsx
 // Replace your existing Login.jsx with this file.
 //
-// Flow: mobile number + password are submitted to /api/auth/send-otp, which
-// verifies the password server-side and only then sends the OTP. The code
-// is then submitted to /api/auth/verify-otp to finish logging in and get a
-// token. This calls send-otp/verify-otp directly instead of your old
-// email/password `login()` from AuthContext.
+// DEV MODE: the OTP step is disabled to match the backend (auth.controller.js
+// currently has real OTP send/verify commented out too). Submitting phone +
+// password now logs you in directly — no OTP screen, no code to type.
+//
+// TO RESTORE THE REAL OTP FLOW LATER:
+//   1. In auth.controller.js, uncomment the "REAL OTP SEND" and
+//      "REAL OTP VERIFY" blocks (and the otp.store.js / sms.service.js
+//      imports) and remove the "DEV MODE" pass-through lines.
+//   2. In this file, uncomment the "OTP STEP - DISABLED FOR DEV" block
+//      inside handleSendOtp below, and remove the "DEV MODE" pass-through
+//      call to handleVerifyOtp.
+//
+// Flow (when enabled): mobile number + password are submitted to
+// /api/auth/send-otp, which verifies the password server-side and only then
+// sends the OTP. The code is then submitted to /api/auth/verify-otp to
+// finish logging in and get a token.
 // Your AuthContext needs a way to store the token + user once we already
 // have them (rather than making its own network call). If it doesn't have
 // one yet, add something like this to AuthContext.jsx:
@@ -104,10 +115,52 @@ export default function Login() {
 
       if (!res.ok) {
         setError(data.message || "Could not send OTP. Please try again.");
-      } else {
-        setStep("otp");
-        setInfo("A 6-digit code has been sent to your mobile number.");
-        startResendCountdown(60);
+        setLoading(false);
+        return;
+      }
+
+      /* ===================== OTP STEP — DISABLED FOR DEV ==================
+         Uncomment this block (and delete the DEV MODE call below it) to
+         restore showing the OTP-entry screen after send-otp succeeds.
+
+      setStep("otp");
+      setInfo("A 6-digit code has been sent to your mobile number.");
+      startResendCountdown(60);
+      setLoading(false);
+      ======================================================================== */
+
+      // DEV MODE: backend doesn't actually verify an OTP right now, so skip
+      // the OTP screen and finish login immediately with a placeholder code.
+      await devAutoVerify(digits);
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+      setLoading(false);
+    }
+  };
+
+  // DEV MODE ONLY: calls verify-otp right away with a placeholder code since
+  // the backend isn't checking it. Remove this function when you restore the
+  // real OTP flow above.
+  const devAutoVerify = async (digits) => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: digits, otp: "000000", module: module.toUpperCase() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Could not log in.");
+        return;
+      }
+
+      try {
+        setAuth(data.token, data.user, module.toUpperCase());
+        navigate(routeFor(data.user.role, module.toUpperCase()));
+      } catch (authErr) {
+        console.error("setAuth/navigate failed after dev auto-login:", authErr);
+        setError("Signed in, but couldn't start your session. Please refresh and try again.");
       }
     } catch {
       setError("Network error. Please check your connection and try again.");
@@ -266,9 +319,9 @@ export default function Login() {
                 disabled={loading}
                 className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 font-bold text-sm py-3.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex items-center justify-center tracking-wide"
               >
-                {loading ? <Spinner label="Sending code..." /> : (
+                {loading ? <Spinner label="Signing in..." /> : (
                   <span className="flex items-center gap-1">
-                    Send OTP
+                    Sign In
                     <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>

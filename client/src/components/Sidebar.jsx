@@ -19,7 +19,8 @@ import {
   History,
   Clock,
   Plus,
-  Wallet
+  Wallet,
+  UserRound
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -40,9 +41,11 @@ const menuConfig = {
     { label: "Dashboard",    icon: LayoutDashboard, to: "/doctor/opd/dashboard" },
     { label: "OPD Patients", icon: Stethoscope,     to: "/doctor/opd/patients"  },
     { label: "Follow-Ups",   icon: CalendarClock,   to: "/doctor/opd/followups" },
+    { label: "My Profile",   icon: UserRound,       to: "/profile" },
   ],
   "doctor-IPD": [
     { label: "IPD Patients", icon: BedDouble, to: "/doctor/ipd" },
+    { label: "My Profile",   icon: UserRound, to: "/profile" },
   ],
   "pharmacy-Pharmacy": [
     { label: "Dashboard",     icon: LayoutDashboard, to: "/pharmacy-dashboard"  },

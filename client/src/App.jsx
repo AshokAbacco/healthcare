@@ -24,6 +24,8 @@ import DoctorOPDLayout from "./pages/doctor/DoctorOPDLayout";
 import { DoctorOPDDashboard } from "./pages/doctor/DoctorOPDDashboard";
 import { DoctorIPDDashboard } from "./pages/doctor/DoctorIPDDashboard";
 
+import Profile from "./pages/profile/Profile";
+
 import PharmacyDashboard from "./pages/pharmacy/PharmacyDashboard";
 import PharmacyMedicineList from "./pages/pharmacy/PharmacyMedicineList";
 import PharmacyMedicineForm from "./pages/pharmacy/PharmacyMedicineForm";
@@ -106,6 +108,20 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route path="/doctor/ipd" element={<DoctorIPDDashboard patients={ipdPatients} />} />
+      </Route>
+
+      {/* Doctor Profile — shared across OPD and IPD doctors, so it's guarded
+          by role only (no module restriction). NOTE: this assumes
+          ProtectedRoute skips the module check when `module` isn't passed —
+          double check that against your actual ProtectedRoute.jsx. If it
+          requires module, split this into two routes (one per module) like
+          the blocks above instead. */}
+      <Route element={
+        <ProtectedRoute role="doctor">
+          <Layout />
+        </ProtectedRoute>
+      }>
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       {/* Pharmacy */}

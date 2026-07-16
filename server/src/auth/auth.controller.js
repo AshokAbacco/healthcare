@@ -2,6 +2,9 @@
 import prisma from "../lib/prisma.js";
 import { hashPassword, comparePassword } from "./hash.js";
 import { signToken } from "./jwt.js";
+/* ===================== OTP IMPORTS — DISABLED FOR DEV =====================
+   Uncomment this block (and the matching blocks further down) to restore
+   the real OTP flow.
 import {
   generateOtp,
   canResend,
@@ -10,18 +13,17 @@ import {
   secondsUntilResend,
   deleteOtp,
 } from "./otp.store.js";
-import { sendOtpSms, normalizePhone } from "./sms.service.js";
+import { sendOtpSms } from "./sms.service.js";
+============================================================================ */
+import { normalizePhone } from "./sms.service.js";
 
 const VALID_ROLES = ["DOCTOR", "RECEPTIONIST", "PHARMACY"];
 const VALID_MODULES = ["OPD", "IPD", "PHARMACY"];
 
-// Dev/testing convenience: this code always passes OTP verification instead
-// of checking against the real generated code, so you can log in without
-// waiting on the SMS gateway. Password is still checked in sendOtp before
-// this ever runs, so this does NOT bypass authentication — only the SMS step.
-// Set ALLOW_OTP_BYPASS=false in production to disable it entirely.
+/* ===================== OTP BYPASS CONST — DISABLED FOR DEV ================
 const OTP_BYPASS_CODE = "969696";
 const OTP_BYPASS_ENABLED = process.env.ALLOW_OTP_BYPASS !== "false";
+============================================================================ */
 
 // Strip password before ever sending a user object back to the client.
 function toSafeUser(user) {
@@ -162,6 +164,10 @@ export async function sendOtp(req, res) {
       return res.status(403).json({ message: "This account is not assigned to the selected module." });
     }
 
+    /* ===================== REAL OTP SEND — DISABLED FOR DEV ===============
+       Uncomment this block (and remove the dev pass-through return below)
+       to restore actually generating + sending an OTP over SMS.
+
     if (!canResend(normalized)) {
       return res.status(429).json({
         message: `Please wait ${secondsUntilResend(normalized)}s before requesting another OTP.`,
@@ -188,6 +194,12 @@ export async function sendOtp(req, res) {
     }
 
     return res.status(200).json({ message: "OTP sent to your registered mobile number." });
+    ======================================================================== */
+
+    // DEV MODE: OTP sending is disabled. Frontend can move straight to the
+    // "otp" step; verify-otp below accepts any 6-digit code while this is on.
+    console.log(`[OTP][DEV] Skipping real OTP send for ${normalized} (module: ${moduleUpper}).`);
+    return res.status(200).json({ message: "OTP step skipped (dev mode)." });
   } catch (err) {
     console.error("Send OTP error:", err);
     return res.status(500).json({ message: "Could not send OTP. Please try again." });
@@ -217,6 +229,10 @@ export async function verifyOtpAndLogin(req, res) {
 
     console.log(`[OTP-VERIFY] Incoming request — phone raw: "${phone}", normalized: "${normalized}", otp: "${otp}", module: ${moduleUpper}`);
 
+    /* ===================== REAL OTP VERIFY — DISABLED FOR DEV =============
+       Uncomment this block (and remove the dev pass-through below) to
+       restore actually checking the submitted code against the stored OTP.
+
     const submittedOtp = String(otp).trim();
     const isBypass = OTP_BYPASS_ENABLED && submittedOtp === OTP_BYPASS_CODE;
 
@@ -235,6 +251,10 @@ export async function verifyOtpAndLogin(req, res) {
       }
       console.log(`[OTP-VERIFY] OTP matched for ${normalized}`);
     }
+    ======================================================================== */
+
+    // DEV MODE: any 6-digit code is accepted, no real OTP check happens.
+    console.log(`[OTP-VERIFY][DEV] Skipping real OTP check for ${normalized}.`);
 
     console.log("Finding user...");
 
@@ -267,5 +287,42 @@ export async function me(req, res) {
   } catch (err) {
     console.error("Me error:", err);
     return res.status(500).json({ message: "Something went wrong." });
+  }
+}
+
+// PUT /api/auth/change-password — requires the caller to already be logged
+// in (requireAuth sets req.user). Used by the Profile page's "Change
+// Password" form for any role, including doctors.
+export async function updatePassword(req, res) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "currentPassword and newPassword are required." });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const currentMatches = await comparePassword(currentPassword, user.password);
+    if (!currentMatches) {
+      return res.status(401).json({ message: "Current password is incorrect." });
+    }
+
+    const sameAsOld = await comparePassword(newPassword, user.password);
+    if (sameAsOld) {
+      return res.status(400).json({ message: "New password must be different from the current password." });
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+    return res.status(200).json({ message: "Password updated successfully." });
+  } catch (err) {
+    console.error("Update password error:", err);
+    return res.status(500).json({ message: "Could not update password." });
   }
 }
