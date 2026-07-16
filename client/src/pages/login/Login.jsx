@@ -49,6 +49,14 @@ const MODULES = [
     label: "Pharmacy",
     icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z",
   },
+  {
+    // Not a real "module" like the three above — this is a login CONTEXT the
+    // backend treats specially (checks role === ADMIN instead of a modules
+    // array membership). See auth.controller.js sendOtp/verifyOtpAndLogin.
+    id: "ADMIN",
+    label: "Administrator",
+    icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
 ];
 
 const API_BASE = `${import.meta.env.VITE_API_URL || ""}/api`;
@@ -58,6 +66,7 @@ const API_BASE = `${import.meta.env.VITE_API_URL || ""}/api`;
 function routeFor(role, module) {
   const r = String(role || "").toLowerCase();
   const m = String(module || "").toUpperCase();
+  if (r === "admin") return "/admin/dashboard";
   if (r === "receptionist" && m === "OPD") return "/opd-dashboard";
   if (r === "receptionist" && m === "IPD") return "/ipd-dashboard";
   if (r === "doctor" && m === "OPD") return "/doctor/opd/dashboard";
@@ -262,7 +271,7 @@ export default function Login() {
         <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-white/80 dark:border-slate-800/80 rounded-[32px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.02)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.4)] transition-all duration-300">
           <div className="mb-6">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-3">Select Context</label>
-            <div className="grid grid-cols-3 gap-2.5 p-1.5 bg-slate-100/80 dark:bg-slate-950/60 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
+            <div className="grid grid-cols-4 gap-2 p-1.5 bg-slate-100/80 dark:bg-slate-950/60 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
               {MODULES.map((m) => (
                 <button
                   key={m.id}
@@ -272,14 +281,14 @@ export default function Login() {
                   className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl font-semibold text-sm transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
                     module === m.id
                       ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] border border-slate-200/50 dark:border-slate-700/50 scale-[1.02]"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent"
+                      : "bg-white/40 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60"
                   }`}
                 >
-                  <svg className={`w-5 h-5 mb-1 ${module === m.id ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`w-5 h-5 mb-1 ${module === m.id ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={m.icon} />
                   </svg>
                   <span className="text-[10px] font-bold tracking-wide">{m.id}</span>
-                  <span className="text-[9px] font-medium opacity-60 font-mono tracking-tight mt-0.5">{m.label}</span>
+                  <span className="text-[9px] font-medium opacity-80 font-mono tracking-tight mt-0.5">{m.label}</span>
                 </button>
               ))}
             </div>

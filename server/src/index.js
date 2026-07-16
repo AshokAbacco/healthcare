@@ -7,6 +7,7 @@ import medicineRoutes from "./pharmacy/medicine.routes.js";
 import notificationsRoutes from "./notifications/notifications.routes.js";
 import ipdRoutes from "./IPD/ipd.routes.js";
 import ipdPaymentRoutes from "./IPD/ipdPayment.routes.js";
+import adminRoutes from "./admin/admin.routes.js";
 
 const app = express();
 
@@ -38,5 +39,11 @@ app.use("/api/pharmacy/medicines", medicineRoutes);
 
 // Notifications (read/dismiss tracking, per-user)
 app.use("/api/notifications", notificationsRoutes);
+
+// Admin routes (staff account management + employee directory).
+// No requireAuth/requireRole needed here at the mount point — admin.routes.js
+// already applies `router.use(requireAuth, requireRole("ADMIN"))` internally,
+// same pattern opd.routes.js uses for requireModule("OPD").
+app.use("/api/admin", adminRoutes);
 
 export default app;

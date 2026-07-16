@@ -36,10 +36,15 @@ export function requireRole(...allowedRoles) {
 
 // Use AFTER requireAuth. Checks the modules array baked into the JWT.
 // e.g. router.get("/opd/x", requireAuth, requireModule("OPD"), handler)
+// ADMIN bypasses this check entirely — admins aren't "assigned" to individual
+// modules the way a receptionist/doctor/pharmacy user is; they see everything.
 export function requireModule(...allowedModules) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Not authenticated." });
+    }
+    if (req.user.role === "ADMIN") {
+      return next();
     }
     const userModules = req.user.modules || [];
     const hasAccess = allowedModules.some((m) => userModules.includes(m));

@@ -1,4 +1,5 @@
 // client/src/App.jsx
+// Replace your existing App.jsx with this file
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -18,8 +19,6 @@ import IPDDashboard from "./pages/ipd/IPDDashboard";
 import IPDPatientList from "./pages/ipd/IPDPatientList";
 import IPDPatientForm from "./pages/ipd/IPDPatientForm";
 import IPDPaymentList from "./pages/ipd/payments/IPDPaymentList";
-import IPDFollowUps from "./pages/ipd/IPDFollowUps"
-
 
 import DoctorOPDLayout from "./pages/doctor/DoctorOPDLayout";
 import { DoctorOPDDashboard } from "./pages/doctor/DoctorOPDDashboard";
@@ -27,6 +26,12 @@ import { DoctorOPDRevenue } from "./pages/doctor/DoctorOPDRevenue";
 import { DoctorIPDDashboard } from "./pages/doctor/DoctorIPDDashboard";
 
 import Profile from "./pages/profile/Profile";
+
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminStaffAccounts from "./pages/admin/AdminStaffAccounts";
+import AdminEmployeeDirectory from "./pages/admin/AdminEmployeeDirectory";
+import AdminProfile from "./pages/admin/AdminProfile";
 
 import PharmacyDashboard from "./pages/pharmacy/PharmacyDashboard";
 import PharmacyMedicineList from "./pages/pharmacy/PharmacyMedicineList";
@@ -84,7 +89,6 @@ function AppRoutes() {
         <Route path="/ipd/admit"     element={<IPDPatientForm patients={ipdPatients} setPatients={setIpdPatients} />} />
         <Route path="/ipd/patients"  element={<IPDPatientList patients={ipdPatients} setPatients={setIpdPatients} />} />
         <Route path="/ipd/payments"  element={<IPDPaymentList />} />
-        <Route path="/ipd/followups"  element={<IPDFollowUps />} />
       </Route>
 
       {/* Doctor OPD — /doctor/opd itself just redirects to the dashboard;
@@ -112,12 +116,48 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route path="/doctor/ipd" element={<DoctorIPDDashboard patients={ipdPatients} />} />
-        <Route path="/doctor/ipd/followups" element={< IPDFollowUps patients={ipdPatients} />} />
       </Route>
 
-         
+      {/* Admin — own layout/sidebar (menuConfig key "admin-ADMIN" in
+          Sidebar.jsx), separate from the doctor/receptionist/pharmacy module
+          system entirely. requireModule already lets ADMIN role through for
+          any OPD/IPD/PHARMACY-guarded route (see auth.middleware.js), so
+          these are the admin-ONLY pages — dashboard + staff/employee mgmt. */}
       <Route element={
-        <ProtectedRoute role="doctor">
+        <ProtectedRoute role="admin">
+          <Layout />
+        </ProtectedRoute>
+      }>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/staff"     element={<AdminStaffAccounts />} />
+          <Route path="/admin/employees" element={<AdminEmployeeDirectory />} />
+        </Route>
+        {/* Own dedicated path/component (AdminProfile.jsx), not the shared
+            /profile below — avoids re-creating the duplicate-path bug and
+            matches the naming convention of the other Admin pages. */}
+        <Route path="/admin/profile" element={<AdminProfile />} />
+      </Route>
+
+      {/* Profile — shared across Doctor/Receptionist/Pharmacy (Admin has its
+          own dedicated AdminProfile.jsx at /admin/profile instead, see
+          above). This used to ALSO include Admin at this same /profile path,
+          duplicated per-role (once under the doctor block, once under the
+          admin block) with the exact same path — React Router doesn't pick
+          whichever guard would pass, it matches the FIRST declared route
+          with that path and runs only that one's guard. So an admin hitting
+          /profile was matching the doctor-guarded route, failing the
+          role==="doctor" check, and bouncing to their own dashboard instead
+          of ever reaching Profile. Fixed by giving Admin its own separate
+          path entirely (/admin/profile, above) instead of sharing this one.
+          NOTE: this still assumes ProtectedRoute renders children when
+          called with neither `role` nor `module` (i.e. "just needs to be
+          logged in"). If your ProtectedRoute.jsx requires at least a role,
+          this needs adjusting — happy to fix precisely once you share that
+          file. */}
+      <Route element={
+        <ProtectedRoute>
           <Layout />
         </ProtectedRoute>
       }>

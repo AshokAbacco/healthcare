@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { StatCard, PageHeader, StatusBadge } from "../../components/UI";
-import { Users, Stethoscope, Banknote, Smartphone, UserPlus, TrendingUp, CalendarClock, Bell, Loader2 } from "lucide-react";
+import { Users, IndianRupee, Banknote, Smartphone, UserPlus, TrendingUp, CalendarClock, Bell, Loader2 } from "lucide-react";
 import { api } from "../../lib/api";
 
 export default function OPDDashboard() {
@@ -29,9 +29,9 @@ export default function OPDDashboard() {
   const todayStr = new Date().toISOString().split("T")[0];
   const today = patients.filter(p => p.visitDate === todayStr);
 
-  const totalFee   = today.reduce((s, p) => s + p.fee, 0);
   const totalCash  = today.reduce((s, p) => s + p.cash, 0);
   const totalUPI   = today.reduce((s, p) => s + p.upi, 0);
+  const totalCollected = totalCash + totalUPI; // fee is no longer collected — this IS the real total
   const recentPatients = [...patients].reverse().slice(0, 5);
 
   // Today's follow-ups
@@ -83,7 +83,7 @@ export default function OPDDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard label="Patients Today"           value={today.length}                               icon={Users}       color="blue"   sub={todayStr} />
-        <StatCard label="Consultation Collection" value={`₹${totalFee.toLocaleString()}`}            icon={Stethoscope} color="green"  sub="Today's fees" />
+        <StatCard label="Total Collection"        value={`₹${totalCollected.toLocaleString()}`}     icon={IndianRupee} color="green"  sub="Cash + UPI today" />
         <StatCard label="Cash Collection"         value={`₹${totalCash.toLocaleString()}`}           icon={Banknote}    color="yellow" sub="Cash payments" />
         <StatCard label="UPI Collection"          value={`₹${totalUPI.toLocaleString()}`}            icon={Smartphone}  color="purple" sub="UPI payments" />
       </div>
@@ -199,7 +199,7 @@ export default function OPDDashboard() {
                 <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${item.color} rounded-full transition-all duration-700`}
-                    style={{ width: totalFee ? `${(item.amount / totalFee) * 100}%` : "0%" }}
+                    style={{ width: totalCollected ? `${(item.amount / totalCollected) * 100}%` : "0%" }}
                   />
                 </div>
               </div>
@@ -273,7 +273,7 @@ export default function OPDDashboard() {
             <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/50">
-                  {["Token", "Patient", "Age", "Phone", "Fee", "Payment", "Visit Date"].map(h => (
+                  {["Token", "Patient", "Age", "Phone", "Payment", "Visit Date"].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-500 uppercase tracking-wider">
                       {h}
                     </th>
@@ -294,7 +294,6 @@ export default function OPDDashboard() {
                     </td>
                     <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{p.age}y</td>
                     <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{p.phone}</td>
-                    <td className="px-5 py-3.5 text-emerald-600 dark:text-emerald-400 font-medium">₹{p.fee}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex gap-1 flex-wrap">
                         {p.cash > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:transparent">Cash</span>}

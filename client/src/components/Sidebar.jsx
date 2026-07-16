@@ -20,7 +20,9 @@ import {
   Clock,
   Plus,
   Wallet,
-  UserRound
+  UserRound,
+  ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -36,7 +38,6 @@ const menuConfig = {
     { label: "Admit Patient", icon: BedDouble,       to: "/ipd/admit"     },
     { label: "All Patients",  icon: Users,           to: "/ipd/patients"  },
     { label: "Payments",      icon: Wallet,          to: "/ipd/payments"  },
-    { label: "Follow-Ups",      icon: CalendarClock, to: "/ipd/followups"  },
   ],
   "doctor-OPD": [
     { label: "Dashboard",    icon: LayoutDashboard, to: "/doctor/opd/dashboard" },
@@ -46,7 +47,7 @@ const menuConfig = {
   ],
   "doctor-IPD": [
     { label: "IPD Patients", icon: BedDouble, to: "/doctor/ipd" },
-    { label: "Follow-Ups", icon: CalendarClock, to: "/doctor/ipd/followups" },
+    { label: "My Profile",   icon: UserRound, to: "/profile" },
   ],
   "pharmacy-Pharmacy": [
     { label: "Dashboard",     icon: LayoutDashboard, to: "/pharmacy-dashboard"  },
@@ -54,6 +55,12 @@ const menuConfig = {
     { label: "All Medicines", icon: Pill,            to: "/pharmacy/medicines"  },
     { label: "Stock History", icon: History,         to: "/pharmacy/stock"      },
     { label: "Expiry Alerts", icon: Clock,           to: "/pharmacy/expiry"     },
+  ],
+  "admin-ADMIN": [
+    { label: "Dashboard",          icon: LayoutDashboard, to: "/admin/dashboard"  },
+    { label: "Staff Accounts",     icon: ShieldCheck,     to: "/admin/staff"      },
+    { label: "Employee Directory", icon: Building2,       to: "/admin/employees"  },
+    { label: "My Profile",         icon: UserRound,       to: "/admin/profile" },
   ],
 };
 
