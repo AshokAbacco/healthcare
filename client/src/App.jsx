@@ -116,12 +116,7 @@ function AppRoutes() {
         <Route path="/doctor/ipd/followups" element={< IPDFollowUps patients={ipdPatients} />} />
       </Route>
 
-      {/* Doctor Profile — shared across OPD and IPD doctors, so it's guarded
-          by role only (no module restriction). NOTE: this assumes
-          ProtectedRoute skips the module check when `module` isn't passed —
-          double check that against your actual ProtectedRoute.jsx. If it
-          requires module, split this into two routes (one per module) like
-          the blocks above instead. */}
+    
       <Route element={
         <ProtectedRoute role="doctor">
           <Layout />
