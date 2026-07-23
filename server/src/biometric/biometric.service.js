@@ -260,7 +260,21 @@ export async function processPunch(payload = {}) {
 
   const raw = payload.raw ?? payload;
 
+  console.log("[processPunch] extracted:", {
+    deviceSerial,
+    enrollmentId,
+    punchModeRaw,
+    punchTimeRaw,
+    receivedKeys: Object.keys(payload),
+  });
+
   if (!deviceSerial || !enrollmentId) {
+    console.error("[processPunch] REJECTED — missing deviceSerial or enrollmentId.", {
+      deviceSerial,
+      enrollmentId,
+      receivedKeys: Object.keys(payload),
+      fullPayload: payload,
+    });
     const err = new Error("deviceSerial (SerialNo) and enrollmentId (EnrollmentId) are required.");
     err.status = 400;
     throw err;

@@ -123,6 +123,13 @@ export const attendanceReport = handle(200, async (req) => {
 // Punch (device-facing — not behind requireRole("ADMIN"), see routes file)
 // ============================================================================
 export const punch = handle(200, async (req) => {
-  const result = await biometricService.processPunch(req.body);
-  return result;
+  console.log("[BIOMETRIC PUNCH] Incoming payload:", JSON.stringify(req.body));
+  try {
+    const result = await biometricService.processPunch(req.body);
+    console.log("[BIOMETRIC PUNCH] Result:", JSON.stringify(result));
+    return result;
+  } catch (err) {
+    console.error("[BIOMETRIC PUNCH] Failed:", err.status, err.message, "| payload was:", JSON.stringify(req.body));
+    throw err;
+  }
 });
